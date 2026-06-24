@@ -2,6 +2,7 @@ name: Kwork Monitor
 
 on:
   schedule:
+    # пересохранено для повторной регистрации расписания у GitHub
     - cron: "*/15 * * * *"
   workflow_dispatch: {}
 
