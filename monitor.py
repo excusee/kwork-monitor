@@ -1,7 +1,9 @@
 """
 Мониторинг биржи проектов Kwork без авторизации.
-Ищет заказы по ключевым словам/категориям, фильтрует по релевантности,
-сверяет с уже виденными (seen.json) и выводит новые подходящие заказы как JSON.
+Собирает заказы из категории "Дизайн" и доп. поисков по словам, сверяет
+с уже виденными (seen.json) и выводит ВСЕ новые заказы как JSON — без
+keyword/fuzzy-фильтра по смыслу (это не умеет понимать смысл, только буквы).
+Смысловую фильтрацию делает отдельный шаг classify.py (бесплатная Groq).
 """
 import json
 import re
@@ -9,13 +11,11 @@ import sys
 from pathlib import Path
 
 from playwright.sync_api import sync_playwright
-from rapidfuzz import fuzz
 
 SEEN_FILE = Path(__file__).parent / "seen.json"
 
-# Категория "Дизайн" на бирже проектов (c=15) + прямой поиск по ключевым словам.
-# Категория покрывает большинство релевантных заказов, поиск по словам расширяет охват
-# на заказы, размещённые в других рубриках.
+# Категория "Дизайн" — основной источник, плюс прямой поиск по словам
+# в других категориях для расширения охвата.
 SOURCES = [
     "https://kwork.ru/projects?c=15",
     "https://kwork.ru/projects?keyword=" + "%20".join(["карточка", "маркетплейс"]),
@@ -23,64 +23,6 @@ SOURCES = [
     "https://kwork.ru/projects?keyword=" + "%20".join(["нейросеть", "карточка"]),
     "https://kwork.ru/projects?keyword=" + "%20".join(["карточка", "авито"]),
 ]
-
-# Разговорные/жаргонные варианты названий маркетплейсов — как в App Store-поиске,
-# нечёткое сравнение само переживёт опечатки внутри каждого варианта, но сам вариант
-# написания ("валберис" вместо "вайлдберри" — это не опечатка, а другое слово) нужно
-# знать заранее, иначе fuzzy-match его не дотянет.
-WILDBERRIES_ALIASES = ["wildberries", "вайлдберри", "вайлдберис", "валберис", "wb ", "вб "]
-OZON_ALIASES = ["ozon", "озон"]
-AVITO_ALIASES = ["avito", "авито"]
-MARKETPLACE_HINTS = (
-    ["маркетплейс"] + WILDBERRIES_ALIASES + OZON_ALIASES + AVITO_ALIASES
-)
-
-# Заказ должен упоминать тематику карточек/маркетплейса И визуальную/дизайнерскую
-# работу (или AI-генерацию) — иначе ловим копирайт/SEO/наполнение по слову "карточка".
-TOPIC_HINTS = ["карточ", "инфографик"] + MARKETPLACE_HINTS
-VISUAL_HINTS = [
-    "дизайн", "оформлен", "макет", "баннер", "изображ", "фотошоп",
-    "визуал", "иллюстрац", "фото", "картин", "график",
-]
-AI_HINTS = [
-    "нейросет", "нейронк", " ai ", "иишн", " ии ", "генерац", "neural",
-    "искусственный интеллект",
-]
-EXCLUDE_HINTS = [
-    "наполнен", "копирован текст", "seo", "продвижен", "повышен", "трафик",
-    "wordpress", "вордпресс",
-]
-
-
-FUZZY_THRESHOLD = 80
-
-
-def _matches(keyword: str, text: str) -> bool:
-    # Короткие токены (типа "wb ", " ai ") нечётко не сравниваем — слишком высок
-    # риск случайных совпадений на коротких подстроках. Длинные ключевые слова
-    # сравниваем нечётко (как поиск в приложениях), чтобы пережить опечатки
-    # заказчика (например "карточька" или "вайлдберис").
-    if len(keyword.strip()) <= 4:
-        return keyword in text
-    return fuzz.partial_ratio(keyword, text) >= FUZZY_THRESHOLD
-
-
-def _any_match(keywords: list[str], text: str) -> bool:
-    return any(_matches(kw, text) for kw in keywords)
-
-
-def is_relevant(title: str, description: str) -> bool:
-    text = f"{title} {description}".lower()
-    if _any_match(EXCLUDE_HINTS, text):
-        return False
-    # Явная связка "карточка" + конкретный маркетплейс — почти всегда дизайн-заказ,
-    # пропускаем без доп. условий (даже если описание обрезано "Показать полностью").
-    if _matches("карточ", text) and _any_match(MARKETPLACE_HINTS, text):
-        return True
-    has_topic = _any_match(TOPIC_HINTS, text)
-    has_visual = _any_match(VISUAL_HINTS, text)
-    has_ai = _any_match(AI_HINTS, text)
-    return has_topic and (has_visual or has_ai)
 
 
 def load_seen() -> set[str]:
@@ -134,7 +76,7 @@ def extract_cards(page) -> list[dict]:
 
 def run() -> list[dict]:
     seen = load_seen()
-    new_relevant = []
+    new_cards = []
     found_ids = set()
 
     with sync_playwright() as p:
@@ -149,13 +91,12 @@ def run() -> list[dict]:
                 found_ids.add(card["id"])
                 if card["id"] in seen:
                     continue
-                if is_relevant(card["title"], card["description"]):
-                    new_relevant.append(card)
+                new_cards.append(card)
         browser.close()
 
     seen |= found_ids
     save_seen(seen)
-    return new_relevant
+    return new_cards
 
 
 if __name__ == "__main__":
