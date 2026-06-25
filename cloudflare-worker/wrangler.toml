@@ -1,0 +1,3 @@
+name = "kwork-monitor-webhook"
+main = "webhook.js"
+compatibility_date = "2026-06-24"
