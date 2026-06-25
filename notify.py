@@ -40,16 +40,30 @@ def send_message(text: str, url: str) -> None:
     resp.raise_for_status()
 
 
+MAX_DESCRIPTION_LEN = 1200
+
+
 def format_card(card: dict) -> str:
     draft_html = html.escape(card["draft"])
     budget_line = f"💰 {html.escape(card['budget'])}\n"
     max_budget = card.get("max_budget")
     if max_budget:
         budget_line += f"💸 {html.escape(max_budget)}\n"
+
+    description = card.get("description", "")
+    if len(description) > MAX_DESCRIPTION_LEN:
+        description = description[:MAX_DESCRIPTION_LEN] + "…"
+    description_block = (
+        f"<blockquote expandable>{html.escape(description)}</blockquote>\n\n"
+        if description
+        else ""
+    )
+
     return (
         f"🆕 {html.escape(card['title'])}\n"
         f"{budget_line}"
         f"🔗 {html.escape(card['url'])}\n\n"
+        f"{description_block}"
         f"Черновик отклика:\n"
         f"<blockquote>{draft_html}</blockquote>"
     )

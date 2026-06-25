@@ -51,12 +51,19 @@ def extract_cards(page) -> list[dict]:
         budget = ""
         max_budget = ""
         try:
-            desc_el = card_root.as_element().query_selector(
-                ".wants-card__description-text"
+            # У описания два вложенных div: видимый обрезанный ("Показать полностью")
+            # и скрытый полный. Берём последний — это полный текст без дублирования
+            # обрезанной версии перед ним.
+            desc_parts = card_root.as_element().query_selector_all(
+                ".wants-card__description-text > div"
             )
-            # textContent захватывает и скрытый блок "полного" текста
-            # (видимый блок обрезан кнопкой "Показать полностью").
-            description = (desc_el.text_content() or "").strip() if desc_el else ""
+            if desc_parts:
+                description = (desc_parts[-1].text_content() or "").strip()
+                # Убираем хвостовое "Скрыть"/"Показать полностью" — это просто
+                # текст кнопки-тоггла, попавший в text_content.
+                description = re.sub(
+                    r"\s*(Скрыть|Показать полностью)\s*$", "", description
+                )
             price_el = card_root.as_element().query_selector(".wants-card__price")
             if price_el:
                 budget = price_el.inner_text().strip().replace("\n", " ")
