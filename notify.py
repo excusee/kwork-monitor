@@ -40,7 +40,7 @@ def send_message(text: str, url: str) -> None:
     resp.raise_for_status()
 
 
-MAX_DESCRIPTION_LEN = 1200
+MAX_DESCRIPTION_LEN = 2500
 
 
 def format_card(card: dict) -> str:
