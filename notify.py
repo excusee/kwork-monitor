@@ -46,8 +46,8 @@ def format_card(card: dict) -> str:
         f"🆕 {html.escape(card['title'])}\n"
         f"💰 {html.escape(card['budget'])}\n"
         f"🔗 {html.escape(card['url'])}\n\n"
-        f"Черновик отклика (тапни — скопируется целиком):\n"
-        f"<pre>{draft_html}</pre>"
+        f"Черновик отклика:\n"
+        f"<blockquote>{draft_html}</blockquote>"
     )
 
 
