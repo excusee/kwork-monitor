@@ -9,6 +9,7 @@ import sys
 from pathlib import Path
 
 from playwright.sync_api import sync_playwright
+from rapidfuzz import fuzz
 
 SEEN_FILE = Path(__file__).parent / "seen.json"
 
@@ -46,17 +47,34 @@ MARKETPLACE_HINTS = [
 ]
 
 
+FUZZY_THRESHOLD = 85
+
+
+def _matches(keyword: str, text: str) -> bool:
+    # Короткие токены (типа "wb ", " ai ") нечётко не сравниваем — слишком высок
+    # риск случайных совпадений на коротких подстроках. Длинные ключевые слова
+    # сравниваем нечётко (как поиск в приложениях), чтобы пережить опечатки
+    # заказчика (например "карточька" или "вайлдберис").
+    if len(keyword.strip()) <= 4:
+        return keyword in text
+    return fuzz.partial_ratio(keyword, text) >= FUZZY_THRESHOLD
+
+
+def _any_match(keywords: list[str], text: str) -> bool:
+    return any(_matches(kw, text) for kw in keywords)
+
+
 def is_relevant(title: str, description: str) -> bool:
     text = f"{title} {description}".lower()
-    if any(kw in text for kw in EXCLUDE_HINTS):
+    if _any_match(EXCLUDE_HINTS, text):
         return False
     # Явная связка "карточка" + конкретный маркетплейс — почти всегда дизайн-заказ,
     # пропускаем без доп. условий (даже если описание обрезано "Показать полностью").
-    if "карточ" in text and any(kw in text for kw in MARKETPLACE_HINTS):
+    if _matches("карточ", text) and _any_match(MARKETPLACE_HINTS, text):
         return True
-    has_topic = any(kw in text for kw in TOPIC_HINTS)
-    has_visual = any(kw in text for kw in VISUAL_HINTS)
-    has_ai = any(kw in text for kw in AI_HINTS)
+    has_topic = _any_match(TOPIC_HINTS, text)
+    has_visual = _any_match(VISUAL_HINTS, text)
+    has_ai = _any_match(AI_HINTS, text)
     return has_topic and (has_visual or has_ai)
 
 
