@@ -42,9 +42,13 @@ def send_message(text: str, url: str) -> None:
 
 def format_card(card: dict) -> str:
     draft_html = html.escape(card["draft"])
+    budget_line = f"💰 {html.escape(card['budget'])}\n"
+    max_budget = card.get("max_budget")
+    if max_budget:
+        budget_line += f"💸 {html.escape(max_budget)}\n"
     return (
         f"🆕 {html.escape(card['title'])}\n"
-        f"💰 {html.escape(card['budget'])}\n"
+        f"{budget_line}"
         f"🔗 {html.escape(card['url'])}\n\n"
         f"Черновик отклика:\n"
         f"<blockquote>{draft_html}</blockquote>"

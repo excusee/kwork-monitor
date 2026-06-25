@@ -49,6 +49,7 @@ def extract_cards(page) -> list[dict]:
         card_root = link.evaluate_handle("e => e.closest('.want-card')")
         description = ""
         budget = ""
+        max_budget = ""
         try:
             desc_el = card_root.as_element().query_selector(
                 ".wants-card__description-text"
@@ -59,6 +60,11 @@ def extract_cards(page) -> list[dict]:
             price_el = card_root.as_element().query_selector(".wants-card__price")
             if price_el:
                 budget = price_el.inner_text().strip().replace("\n", " ")
+            max_price_el = card_root.as_element().query_selector(
+                ".wants-card__description-higher-price"
+            )
+            if max_price_el:
+                max_budget = " ".join(max_price_el.inner_text().split())
         except Exception:
             pass
 
@@ -68,6 +74,7 @@ def extract_cards(page) -> list[dict]:
                 "title": title,
                 "description": description,
                 "budget": budget,
+                "max_budget": max_budget,
                 "url": f"https://kwork.ru/projects/{project_id}",
             }
         )
