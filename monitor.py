@@ -47,7 +47,7 @@ MARKETPLACE_HINTS = [
 ]
 
 
-FUZZY_THRESHOLD = 85
+FUZZY_THRESHOLD = 80
 
 
 def _matches(keyword: str, text: str) -> bool:
