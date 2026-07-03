@@ -1,0 +1,20 @@
+name: Test notify
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install requests
+      - name: Send test notification
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          echo '[{"id":"test001","title":"Тестовый заказ — дизайн карточек Wildberries","budget":"до 5 000 ₽","max_budget":"до 15 000 ₽","description":"Нужен дизайн 10 карточек для товаров на Wildberries. Есть референсы, ТЗ предоставим после отклика. Стиль — минимализм, светлые тона.","url":"https://kwork.ru/projects/3205282"}]' | python notify.py
