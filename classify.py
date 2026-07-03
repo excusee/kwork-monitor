@@ -8,6 +8,7 @@
 """
 import json
 import os
+import re
 import sys
 
 import requests
@@ -56,9 +57,19 @@ def ask_groq(prompt: str) -> str:
     return resp.json()["choices"][0]["message"]["content"].strip().upper()
 
 
+def _max_budget(budget_str: str) -> int:
+    nums = re.findall(r'\d+', budget_str.replace(' ', '').replace(' ', ''))
+    return max((int(n) for n in nums), default=0)
+
+
 def run(candidates: list[dict]) -> list[dict]:
     relevant = []
     for card in candidates:
+        max_b = _max_budget(card.get('budget', ''))
+        if max_b > 0 and max_b < 1000:
+            print(f"Пропускаем {card['id']} — бюджет {card.get('budget')} < 1000₽", file=sys.stderr)
+            continue
+
         prompt = PROMPT_TEMPLATE.format(
             title=card["title"], description=card["description"]
         )

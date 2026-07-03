@@ -1,0 +1,26 @@
+name: Mark applied
+
+on:
+  workflow_dispatch:
+    inputs:
+      url:
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  mark:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Append to applied.log
+        run: |
+          echo "$(date -u +%Y-%m-%dT%H:%M:%SZ),${{ inputs.url }}" >> applied.log
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git add applied.log
+          git commit -m "applied: ${{ inputs.url }}"
+          git push

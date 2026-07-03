@@ -39,18 +39,25 @@ jobs:
           node-version: "20"
 
       - name: Cache claude CLI
+        id: cache-claude
         uses: actions/cache@v4
         with:
           path: ~/.npm-global
-          key: claude-cli-${{ runner.os }}
+          key: claude-cli-${{ runner.os }}-v1
 
-      - name: Install deps
+      - name: Install claude CLI
+        if: steps.cache-claude.outputs.cache-hit != 'true'
         run: |
-          pip install requests
           npm config set prefix ~/.npm-global
-          export PATH="$HOME/.npm-global/bin:$PATH"
           npm install -g @anthropic-ai/claude-code
+
+      - name: Add claude to PATH
+        run: |
+          npm config set prefix ~/.npm-global
           echo "$HOME/.npm-global/bin" >> $GITHUB_PATH
+
+      - name: Install Python deps
+        run: pip install requests
 
       - name: Generate and send draft
         env:
@@ -63,8 +70,10 @@ jobs:
           ORDER_DESCRIPTION: ${{ inputs.description }}
           ORDER_URL: ${{ inputs.url }}
         run: |
+          echo "⏱ $(date +%s%3N) — start"
           python -c "import json,os; print(json.dumps([{'id':'on_demand','title':os.environ['ORDER_TITLE'],'budget':os.environ['ORDER_BUDGET'],'description':os.environ['ORDER_DESCRIPTION'],'url':os.environ['ORDER_URL']}],ensure_ascii=False))" > on_demand_input.json
-          cat on_demand_input.json
+          echo "⏱ $(date +%s%3N) — running draft.py (claude -p)"
           python draft.py < on_demand_input.json > on_demand_drafted.json
-          cat on_demand_drafted.json
+          echo "⏱ $(date +%s%3N) — draft.py done, sending to Telegram"
           python send_draft.py < on_demand_drafted.json
+          echo "⏱ $(date +%s%3N) — done"

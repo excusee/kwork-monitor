@@ -18,7 +18,6 @@
 
 const KWORK_URL_RE = /https:\/\/kwork\.ru\/projects\/\d+/;
 const GITHUB_REPO = "excusee/kwork-monitor";
-const WORKFLOW_FILE = "draft_on_demand.yml";
 
 async function answerCallback(token, callbackQueryId, text) {
   await fetch(`https://api.telegram.org/bot${token}/answerCallbackQuery`, {
@@ -28,19 +27,22 @@ async function answerCallback(token, callbackQueryId, text) {
   });
 }
 
-async function triggerWorkflow(pat, inputs) {
+async function triggerWorkflow(pat, workflowFile, inputs) {
   const resp = await fetch(
-    `https://api.github.com/repos/${GITHUB_REPO}/actions/workflows/${WORKFLOW_FILE}/dispatches`,
+    `https://api.github.com/repos/${GITHUB_REPO}/actions/workflows/${workflowFile}/dispatches`,
     {
       method: "POST",
       headers: {
         Authorization: `Bearer ${pat}`,
         Accept: "application/vnd.github+json",
         "Content-Type": "application/json",
+        "User-Agent": "kwork-monitor-webhook",
       },
       body: JSON.stringify({ ref: "main", inputs }),
     }
   );
+  const body = await resp.text();
+  console.log(`GitHub API: ${resp.status} ${body}`);
   return resp.ok;
 }
 
@@ -70,8 +72,9 @@ export default {
 
     const update = await request.json();
 
-    // --- Кнопка "✍️ Написать отклик" ---
     const cq = update.callback_query;
+
+    // --- Кнопка "✍️ Написать отклик" ---
     if (cq && cq.data === "draft") {
       await answerCallback(env.TELEGRAM_BOT_TOKEN, cq.id, "⏳ Генерирую черновик...");
 
@@ -80,13 +83,27 @@ export default {
       const messageId = String(cq.message?.message_id || "");
 
       if (url) {
-        await triggerWorkflow(env.GITHUB_PAT, {
+        await triggerWorkflow(env.GITHUB_PAT, "draft_on_demand.yml", {
           title,
           budget,
           description,
           url,
           message_id: messageId,
         });
+      }
+
+      return new Response("ok", { status: 200 });
+    }
+
+    // --- Кнопка "✅ Отклик сработал" ---
+    if (cq && cq.data === "applied") {
+      await answerCallback(env.TELEGRAM_BOT_TOKEN, cq.id, "✅ Записал!");
+
+      const keyboard = cq.message?.reply_markup?.inline_keyboard;
+      const url = keyboard?.[0]?.[0]?.url || "";
+
+      if (url) {
+        await triggerWorkflow(env.GITHUB_PAT, "mark_applied.yml", { url });
       }
 
       return new Response("ok", { status: 200 });

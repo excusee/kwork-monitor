@@ -28,7 +28,10 @@ def run(cards: list[dict]) -> None:
             "parse_mode": "HTML",
             "disable_web_page_preview": True,
             "reply_markup": {
-                "inline_keyboard": [[{"text": "🔗 Перейти к заказу", "url": card["url"]}]]
+                "inline_keyboard": [[
+                    {"text": "🔗 Перейти к заказу", "url": card["url"]},
+                    {"text": "✅ Отклик сработал", "callback_data": "applied"},
+                ]]
             },
         }
         if REPLY_TO:
