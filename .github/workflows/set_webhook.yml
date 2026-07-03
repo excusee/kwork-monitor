@@ -1,0 +1,14 @@
+name: Set Telegram Webhook
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  set-webhook:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set webhook
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        run: |
+          curl -s "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook?url=https://kwork-monitor-webhook.excusee.workers.dev"

@@ -1,0 +1,66 @@
+name: Draft on demand
+
+on:
+  workflow_dispatch:
+    inputs:
+      title:
+        required: true
+      budget:
+        required: false
+        default: ""
+      description:
+        required: false
+        default: ""
+      url:
+        required: true
+      message_id:
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  draft:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install deps
+        run: |
+          pip install requests
+          npm install -g @anthropic-ai/claude-code
+
+      - name: Generate and send draft
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          REPLY_TO_MESSAGE_ID: ${{ inputs.message_id }}
+        run: |
+          python - <<'EOF'
+          import json
+          card = {
+            "id": "on_demand",
+            "title": """${{ inputs.title }}""",
+            "budget": """${{ inputs.budget }}""",
+            "description": """${{ inputs.description }}""",
+            "url": """${{ inputs.url }}""",
+          }
+          with open("on_demand_input.json", "w") as f:
+              json.dump([card], f, ensure_ascii=False)
+          EOF
+          python draft.py < on_demand_input.json > on_demand_drafted.json
+          python send_draft.py < on_demand_drafted.json

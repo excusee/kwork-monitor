@@ -32,7 +32,10 @@ def send_message(text: str, url: str) -> None:
             "parse_mode": "HTML",
             "disable_web_page_preview": True,
             "reply_markup": {
-                "inline_keyboard": [[{"text": "🔗 Перейти к заказу", "url": url}]]
+                "inline_keyboard": [[
+                    {"text": "🔗 Перейти к заказу", "url": url},
+                    {"text": "✍️ Написать отклик", "callback_data": "draft"},
+                ]],
             },
         },
         timeout=20,
@@ -44,7 +47,6 @@ MAX_DESCRIPTION_LEN = 2500
 
 
 def format_card(card: dict) -> str:
-    draft_html = html.escape(card["draft"])
     budget_line = f"💰 {html.escape(card['budget'])}\n"
     max_budget = card.get("max_budget")
     if max_budget:
@@ -54,7 +56,7 @@ def format_card(card: dict) -> str:
     if len(description) > MAX_DESCRIPTION_LEN:
         description = description[:MAX_DESCRIPTION_LEN] + "…"
     description_block = (
-        f"<blockquote expandable>{html.escape(description)}</blockquote>\n\n"
+        f"<blockquote expandable>{html.escape(description)}</blockquote>"
         if description
         else ""
     )
@@ -64,8 +66,6 @@ def format_card(card: dict) -> str:
         f"{budget_line}"
         f"🔗 {html.escape(card['url'])}\n\n"
         f"{description_block}"
-        f"Черновик отклика:\n"
-        f"<blockquote>{draft_html}</blockquote>"
     )
 
 
