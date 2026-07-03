@@ -54,17 +54,7 @@ jobs:
           ORDER_DESCRIPTION: ${{ inputs.description }}
           ORDER_URL: ${{ inputs.url }}
         run: |
-          python -c "
-import json, os
-card = {
-  'id': 'on_demand',
-  'title': os.environ['ORDER_TITLE'],
-  'budget': os.environ['ORDER_BUDGET'],
-  'description': os.environ['ORDER_DESCRIPTION'],
-  'url': os.environ['ORDER_URL'],
-}
-print(json.dumps([card], ensure_ascii=False))
-" > on_demand_input.json
+          python -c "import json,os; print(json.dumps([{'id':'on_demand','title':os.environ['ORDER_TITLE'],'budget':os.environ['ORDER_BUDGET'],'description':os.environ['ORDER_DESCRIPTION'],'url':os.environ['ORDER_URL']}],ensure_ascii=False))" > on_demand_input.json
           cat on_demand_input.json
           python draft.py < on_demand_input.json > on_demand_drafted.json
           cat on_demand_drafted.json
