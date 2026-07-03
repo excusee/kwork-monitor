@@ -40,6 +40,7 @@ def send_message(text: str, url: str) -> None:
         },
         timeout=20,
     )
+    print(resp.status_code, resp.text)
     resp.raise_for_status()
 
 
