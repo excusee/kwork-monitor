@@ -10,6 +10,7 @@ import json
 import os
 import re
 import sys
+import time
 
 import requests
 
@@ -42,19 +43,25 @@ PROMPT_TEMPLATE = """Заказ с биржи фриланса Kwork:
 
 
 def ask_groq(prompt: str) -> str:
-    resp = requests.post(
-        GROQ_URL,
-        headers={"Authorization": f"Bearer {GROQ_API_KEY}"},
-        json={
-            "model": GROQ_MODEL,
-            "messages": [{"role": "user", "content": prompt}],
-            "temperature": 0,
-            "max_tokens": 5,
-        },
-        timeout=30,
-    )
+    for attempt in range(2):
+        resp = requests.post(
+            GROQ_URL,
+            headers={"Authorization": f"Bearer {GROQ_API_KEY}"},
+            json={
+                "model": GROQ_MODEL,
+                "messages": [{"role": "user", "content": prompt}],
+                "temperature": 0,
+                "max_tokens": 5,
+            },
+            timeout=30,
+        )
+        if resp.status_code == 429 and attempt == 0:
+            time.sleep(10)
+            continue
+        resp.raise_for_status()
+        return resp.json()["choices"][0]["message"]["content"].strip().upper()
     resp.raise_for_status()
-    return resp.json()["choices"][0]["message"]["content"].strip().upper()
+    return ""
 
 
 def _max_budget(budget_str: str) -> int:
@@ -76,11 +83,10 @@ def run(candidates: list[dict]) -> list[dict]:
         try:
             answer = ask_groq(prompt)
         except Exception as e:
-            # Если Groq недоступен — пропускаем заказ дальше на Claude, а не теряем
-            # его молча (Claude всё равно сделает финальную проверку релевантности).
             print(f"Groq недоступен для {card['id']}: {e}", file=sys.stderr)
-            relevant.append(card)
             continue
+
+        time.sleep(2)
 
         if answer.startswith("YES"):
             relevant.append(card)
