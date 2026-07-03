@@ -49,18 +49,23 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           REPLY_TO_MESSAGE_ID: ${{ inputs.message_id }}
+          ORDER_TITLE: ${{ inputs.title }}
+          ORDER_BUDGET: ${{ inputs.budget }}
+          ORDER_DESCRIPTION: ${{ inputs.description }}
+          ORDER_URL: ${{ inputs.url }}
         run: |
-          python - <<'EOF'
-          import json
-          card = {
-            "id": "on_demand",
-            "title": """${{ inputs.title }}""",
-            "budget": """${{ inputs.budget }}""",
-            "description": """${{ inputs.description }}""",
-            "url": """${{ inputs.url }}""",
-          }
-          with open("on_demand_input.json", "w") as f:
-              json.dump([card], f, ensure_ascii=False)
-          EOF
+          python -c "
+import json, os
+card = {
+  'id': 'on_demand',
+  'title': os.environ['ORDER_TITLE'],
+  'budget': os.environ['ORDER_BUDGET'],
+  'description': os.environ['ORDER_DESCRIPTION'],
+  'url': os.environ['ORDER_URL'],
+}
+print(json.dumps([card], ensure_ascii=False))
+" > on_demand_input.json
+          cat on_demand_input.json
           python draft.py < on_demand_input.json > on_demand_drafted.json
+          cat on_demand_drafted.json
           python send_draft.py < on_demand_drafted.json
