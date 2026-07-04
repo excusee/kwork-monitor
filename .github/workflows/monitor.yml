@@ -41,17 +41,7 @@ jobs:
           python monitor.py > candidates.json
           python classify.py < candidates.json > classified.json 2>classify_log.txt
           cat classify_log.txt >&2
-          python3 -c "
-import json, re
-from pathlib import Path
-log = Path('classify_log.txt').read_text()
-failed = re.findall(r'Groq недоступен для (\d+):', log)
-if failed:
-    seen = json.loads(Path('seen.json').read_text())
-    seen = [x for x in seen if x not in failed]
-    Path('seen.json').write_text(json.dumps(seen, ensure_ascii=False, indent=2))
-    print(f'Убрали из seen.json {len(failed)} ID с ошибкой Groq: {failed}')
-"
+          python remove_groq_failed.py
           python notify.py < classified.json
 
       - name: Commit updated seen.json
