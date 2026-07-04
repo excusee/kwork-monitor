@@ -89,7 +89,10 @@ def run(candidates: list[dict]) -> list[dict]:
         time.sleep(2)
 
         if answer.startswith("YES"):
+            print(f"YES {card['id']} — {card['title'][:60]}", file=sys.stderr)
             relevant.append(card)
+        else:
+            print(f"NO  {card['id']} — {card['title'][:60]}", file=sys.stderr)
     return relevant
 
 
