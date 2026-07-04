@@ -18,7 +18,9 @@ SEEN_FILE = Path(__file__).parent / "seen.json"
 # в других категориях для расширения охвата.
 SOURCES = [
     "https://kwork.ru/projects?c=15",
+    "https://kwork.ru/projects?c=15&page=2",
     "https://kwork.ru/projects?keyword=" + "%20".join(["карточка", "маркетплейс"]),
+    "https://kwork.ru/projects?keyword=" + "%20".join(["карточка", "маркетплейс"]) + "&page=2",
     "https://kwork.ru/projects?keyword=" + "%20".join(["инфографика", "товара"]),
     "https://kwork.ru/projects?keyword=" + "%20".join(["нейросеть", "карточка"]),
     "https://kwork.ru/projects?keyword=" + "%20".join(["карточка", "авито"]),
